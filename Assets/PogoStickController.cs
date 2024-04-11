@@ -18,6 +18,7 @@ public class PogoStickController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         am = FindObjectOfType<AudioManager>();
         IgnoreCollisionsWithPlayer();
+        ragdoll.GetComponent<CharacterPoseSaver>().SaveCurrentPose();
     }
 
     void Update()
@@ -113,9 +114,10 @@ public class PogoStickController : MonoBehaviour
     }
 
     private void Reset() {
-        ragdoll.SetActive(false);
+        // ragdoll.SetActive(false);
         transform.position = new Vector3(transform.position.x, transform.position.y + 2, 0);
         transform.eulerAngles = new Vector3(0, 0, 0);
-        ragdoll.SetActive(true);
+        // ragdoll.SetActive(true);
+        ragdoll.GetComponent<CharacterPoseSaver>().ResetToSavedPose();
     }
 }
