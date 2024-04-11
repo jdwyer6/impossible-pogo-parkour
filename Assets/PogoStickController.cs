@@ -7,10 +7,12 @@ public class PogoStickController : MonoBehaviour
     public float minBounceHeight = 2f;
     private Rigidbody rb;
     private bool isGrounded;
+    public Transform groundCheck;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        IgnoreCollisionsWithPlayer();
     }
 
     void Update()
@@ -30,7 +32,7 @@ public class PogoStickController : MonoBehaviour
     private void CheckGrounded()
     {
         // Simple ground check below the pogo stick
-        isGrounded = Physics.Raycast(transform.position, -transform.up, 0.5f);
+        isGrounded = Physics.Raycast(groundCheck.position, -transform.up, 0.5f);
     }
 
     private void Bounce()
@@ -62,6 +64,23 @@ public class PogoStickController : MonoBehaviour
         else if (Input.GetKey(KeyCode.D))
         {
             rb.AddRelativeTorque(Vector3.back * leanTorque);  // Lean forward
+        }
+    }
+
+    private void IgnoreCollisionsWithPlayer() {
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject player in players)
+        {
+            Collider[] playerColliders = player.GetComponents<Collider>();
+            Collider myCollider = GetComponent<Collider>();
+
+            if (myCollider != null)
+            {
+                foreach (var playerCollider in playerColliders)
+                {
+                    Physics.IgnoreCollision(myCollider, playerCollider);
+                }
+            }
         }
     }
 }
