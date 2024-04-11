@@ -3,21 +3,30 @@ using UnityEngine;
 public class PogoStickController : MonoBehaviour
 {
     public float jumpForce = 10f;
+    public float bouncePadForce = 10f;
     public float leanTorque = 50f;
     public float minBounceHeight = 2f;
     private Rigidbody rb;
     private bool isGrounded;
     public Transform groundCheck;
+    private AudioManager am;
+    public GameObject ragdoll;
+    private bool canReset;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        am = FindObjectOfType<AudioManager>();
         IgnoreCollisionsWithPlayer();
     }
 
     void Update()
     {
         HandleLeaning();
+        if (Input.GetKeyDown(KeyCode.R) && canReset)
+        {
+            Reset();
+        }
     }
 
     void FixedUpdate()
@@ -31,8 +40,21 @@ public class PogoStickController : MonoBehaviour
 
     private void CheckGrounded()
     {
-        // Simple ground check below the pogo stick
-        isGrounded = Physics.Raycast(groundCheck.position, -transform.up, 0.5f);
+        RaycastHit hit;
+        isGrounded = Physics.Raycast(groundCheck.position, -transform.up, out hit, 0.5f);
+        if (isGrounded)
+        {
+            if (hit.collider.CompareTag("BouncePad"))
+            {
+                HandleBouncePad();
+            }
+        }
+    }
+
+    private void HandleBouncePad()
+    {
+        rb.AddForce(Vector3.up * (bouncePadForce - rb.velocity.y), ForceMode.VelocityChange);
+        am.Play("Bounce");
     }
 
     private void Bounce()
@@ -41,13 +63,12 @@ public class PogoStickController : MonoBehaviour
         if (rb.velocity.y < 0)
         {
             rb.AddForce(Vector3.up * (jumpForce - rb.velocity.y), ForceMode.VelocityChange);
+            am.Play("Bounce");
 
             // Calculate the direction based on the current lean
             float zRotation = transform.localEulerAngles.z;
             zRotation = (zRotation > 180f) ? zRotation - 360f : zRotation;  // Normalize angle to -180 to 180
 
-            // Apply a forward or backward force based on the lean
-            // Apply a forward or backward force based on the lean
             float leanFactor = Mathf.Sin(Mathf.Deg2Rad * zRotation);
             Vector3 leanDirection = (zRotation > 0) ? -transform.right : transform.right;
             rb.AddForce(leanDirection * Mathf.Abs(leanFactor) * jumpForce * 0.5f, ForceMode.VelocityChange);
@@ -82,5 +103,19 @@ public class PogoStickController : MonoBehaviour
                 }
             }
         }
+    }
+
+    private void OnCollisionStay(Collision other) {
+        var rotation = transform.eulerAngles;
+        if (rotation.z > 60f || rotation.z < -60f) {
+            canReset = true;
+        }
+    }
+
+    private void Reset() {
+        ragdoll.SetActive(false);
+        transform.position = new Vector3(transform.position.x, transform.position.y + 2, 0);
+        transform.eulerAngles = new Vector3(0, 0, 0);
+        ragdoll.SetActive(true);
     }
 }

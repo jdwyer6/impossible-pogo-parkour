@@ -37,7 +37,7 @@ public class AudioManager : MonoBehaviour
     }
 
     private void Start() {
-        // this.Play(soundtrackClips[currentSoundtrack]);    
+        this.Play(soundtrackClips[currentSoundtrack]);    
     }
 
     private void Update() {
