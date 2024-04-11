@@ -1,4 +1,6 @@
 using UnityEngine;
+using System.Collections;
+
 
 public class PogoStickController : MonoBehaviour
 {
@@ -12,6 +14,10 @@ public class PogoStickController : MonoBehaviour
     private AudioManager am;
     public GameObject ragdoll;
     private bool canReset;
+    
+
+    private bool facingLeft = false;
+    private IEnumerator currentFlipCoroutine;
 
     void Start()
     {
@@ -27,6 +33,11 @@ public class PogoStickController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.R) && canReset)
         {
             Reset();
+        }
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            Flip();
         }
     }
 
@@ -55,7 +66,7 @@ public class PogoStickController : MonoBehaviour
     private void HandleBouncePad()
     {
         rb.AddForce(Vector3.up * (bouncePadForce - rb.velocity.y), ForceMode.VelocityChange);
-        am.Play("Bounce");
+        am.Play("Bounce_BouncePad");
     }
 
     private void Bounce()
@@ -119,5 +130,37 @@ public class PogoStickController : MonoBehaviour
         transform.eulerAngles = new Vector3(0, 0, 0);
         // ragdoll.SetActive(true);
         ragdoll.GetComponent<CharacterPoseSaver>().ResetToSavedPose();
+    }
+
+    private void Flip() {
+        if (currentFlipCoroutine != null) {
+            StopCoroutine(currentFlipCoroutine);
+        }
+        currentFlipCoroutine = FlipCoroutine();
+        StartCoroutine(currentFlipCoroutine);
+    }
+
+    private IEnumerator FlipCoroutine() {
+        Quaternion startRotation = transform.rotation;
+        Quaternion endRotation;
+
+        if (facingLeft) {
+            endRotation = Quaternion.Euler(0, 0, 0);
+            facingLeft = false;
+        } else {
+            endRotation = Quaternion.Euler(0, 180, 0);
+            facingLeft = true;
+        }
+
+        float timeElapsed = 0;
+        float duration = 0.3f;
+
+        while (timeElapsed < duration) {
+            transform.rotation = Quaternion.Lerp(startRotation, endRotation, timeElapsed / duration);
+            timeElapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.rotation = endRotation; // Ensure the final rotation is set correctly
     }
 }
