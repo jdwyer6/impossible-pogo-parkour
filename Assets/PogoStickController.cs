@@ -1,23 +1,40 @@
 using UnityEngine;
 using System.Collections;
-
+using UnityEngine.UI;
 
 public class PogoStickController : MonoBehaviour
 {
+    [Header("Components")]
+    private Rigidbody rb;
+    private AudioManager am;
+
+    [Header("Physics Parameters")]
     public float jumpForce = 10f;
     public float bouncePadForce = 10f;
     public float leanTorque = 50f;
+    public float rocketForce = 10f;
+
+    [Header("Bounce Controls")]
     public float minBounceHeight = 2f;
-    private Rigidbody rb;
-    private bool isGrounded;
-    public Transform groundCheck;
-    private AudioManager am;
+    public Transform groundCheck; 
+
+    [Header("Rocket Parameters")]
+    public GameObject rocket;
+    public float fuel = 100f; 
+    public Slider fuelSlider; 
+    private bool rocketActive = false; 
+    private IEnumerator fuelConsumptionCoroutine; 
+
+    [Header("Ragdoll")]
     public GameObject ragdoll;
     private bool canReset;
-    
 
+    [Header("Player State")]
+    private bool isGrounded;
     private bool facingLeft = false;
-    private IEnumerator currentFlipCoroutine;
+
+    [Header("Coroutines")]
+    private IEnumerator currentFlipCoroutine; 
 
     void Start()
     {
@@ -39,6 +56,36 @@ public class PogoStickController : MonoBehaviour
         {
             Flip();
         }
+
+        if (Input.GetKeyDown(KeyCode.LeftShift) && fuel > 0)
+        {
+            if (fuelConsumptionCoroutine != null) 
+            {
+                StopCoroutine(fuelConsumptionCoroutine);
+            }
+            fuelConsumptionCoroutine = DecreaseFuelOverTime();
+            StartCoroutine(fuelConsumptionCoroutine);
+        }
+
+        // Stop fuel consumption when Left Shift is released
+        if (Input.GetKeyUp(KeyCode.LeftShift))
+        {
+            if (fuelConsumptionCoroutine != null) 
+            {
+                StopCoroutine(fuelConsumptionCoroutine);
+            }
+        }
+
+        if(Input.GetKeyDown(KeyCode.LeftShift) && fuel > 0)
+        {
+            StartRocket();
+        }
+
+        if (Input.GetKeyUp(KeyCode.LeftShift) || fuel <= 0)
+        {
+            StopRocket();
+        }
+
     }
 
     void FixedUpdate()
@@ -48,6 +95,8 @@ public class PogoStickController : MonoBehaviour
         {
             Bounce();
         }
+
+        HandleRocket();
     }
 
     private void CheckGrounded()
@@ -90,13 +139,15 @@ public class PogoStickController : MonoBehaviour
 
     private void HandleLeaning()
     {
+        int facingDirectionVariable = facingLeft ? -1 : 1;
+
         if (Input.GetKey(KeyCode.A))
         {
-            rb.AddRelativeTorque(Vector3.forward * leanTorque);  // Lean back
+            rb.AddRelativeTorque(Vector3.forward * leanTorque * facingDirectionVariable);  // Lean back
         }
         else if (Input.GetKey(KeyCode.D))
         {
-            rb.AddRelativeTorque(Vector3.back * leanTorque);  // Lean forward
+            rb.AddRelativeTorque(Vector3.back * leanTorque * facingDirectionVariable);  // Lean forward
         }
     }
 
@@ -125,11 +176,12 @@ public class PogoStickController : MonoBehaviour
     }
 
     private void Reset() {
-        // ragdoll.SetActive(false);
         transform.position = new Vector3(transform.position.x, transform.position.y + 2, 0);
         transform.eulerAngles = new Vector3(0, 0, 0);
-        // ragdoll.SetActive(true);
         ragdoll.GetComponent<CharacterPoseSaver>().ResetToSavedPose();
+        if (facingLeft) {
+            Flip();
+        }
     }
 
     private void Flip() {
@@ -163,4 +215,56 @@ public class PogoStickController : MonoBehaviour
 
         transform.rotation = endRotation; // Ensure the final rotation is set correctly
     }
+
+    private void HandleRocket()
+    {
+        // Determine the direction based on whether the player is facing left
+        Vector3 nudgeDirection = facingLeft ? Vector3.left : Vector3.right;
+
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            rb.AddForce(nudgeDirection * rocketForce, ForceMode.Impulse);
+        }
+    }
+
+    private IEnumerator DecreaseFuelOverTime()
+    {
+        while (fuel > 0 && Input.GetKey(KeyCode.LeftShift))
+        {
+            fuel -= 1f; // Adjust fuel consumption rate here
+            fuelSlider.value = fuel / 100f; // Assuming your slider's max value is set to 1
+
+            if (fuel <= 0)
+            {
+                // Optional: Do something when fuel is depleted
+                rocketActive = false; // Stop the rocket
+                yield break; // Exit the coroutine
+            }
+
+            yield return new WaitForSeconds(0.1f); // Adjust the fuel decrease interval here
+        }
+    }
+
+    private void StartRocket() {
+        if (!rocketActive) {
+            am.Play("Rocket");
+            foreach (Transform child in rocket.transform)
+            {
+                child.GetComponent<ParticleSystem>().Play();
+            }
+            rocketActive = true;
+        }
+    }
+
+    private void StopRocket() {
+        if(rocketActive) {
+            am.Stop("Rocket");
+            foreach (Transform child in rocket.transform)
+            {
+                child.GetComponent<ParticleSystem>().Stop();
+            }
+            rocketActive = false;
+        }
+    }
+
 }
