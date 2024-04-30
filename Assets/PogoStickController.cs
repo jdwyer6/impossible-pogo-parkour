@@ -24,6 +24,7 @@ public class PogoStickController : MonoBehaviour
     public Slider fuelSlider; 
     private bool rocketActive = false; 
     private IEnumerator fuelConsumptionCoroutine; 
+    public Light rocketLight;
 
     [Header("Ragdoll")]
     public GameObject ragdoll;
@@ -42,6 +43,7 @@ public class PogoStickController : MonoBehaviour
         am = FindObjectOfType<AudioManager>();
         IgnoreCollisionsWithPlayer();
         ragdoll.GetComponent<CharacterPoseSaver>().SaveCurrentPose();
+        rocketLight.enabled = false;
     }
 
     void Update()
@@ -198,9 +200,11 @@ public class PogoStickController : MonoBehaviour
 
         if (facingLeft) {
             endRotation = Quaternion.Euler(0, 0, 0);
+            rocket.transform.Rotate(0, 0, 0);
             facingLeft = false;
         } else {
             endRotation = Quaternion.Euler(0, 180, 0);
+            rocket.transform.Rotate(0, 180, 0);
             facingLeft = true;
         }
 
@@ -252,6 +256,7 @@ public class PogoStickController : MonoBehaviour
             {
                 child.GetComponent<ParticleSystem>().Play();
             }
+            rocketLight.enabled = true;
             rocketActive = true;
         }
     }
@@ -263,6 +268,7 @@ public class PogoStickController : MonoBehaviour
             {
                 child.GetComponent<ParticleSystem>().Stop();
             }
+            rocketLight.enabled = false;
             rocketActive = false;
         }
     }
