@@ -25,6 +25,7 @@ public class PogoStickController : MonoBehaviour
     private bool rocketActive = false; 
     private IEnumerator fuelConsumptionCoroutine; 
     public Light rocketLight;
+    bool canUseRocket = true;
 
     [Header("Ragdoll")]
     public GameObject ragdoll;
@@ -33,6 +34,7 @@ public class PogoStickController : MonoBehaviour
     [Header("Player State")]
     private bool isGrounded;
     private bool facingLeft = false;
+    private bool leaningLeft = false;
 
     [Header("Coroutines")]
     private IEnumerator currentFlipCoroutine; 
@@ -78,14 +80,22 @@ public class PogoStickController : MonoBehaviour
             }
         }
 
-        if(Input.GetKeyDown(KeyCode.LeftShift) && fuel > 0)
+        if(Input.GetKeyDown(KeyCode.LeftShift) && canUseRocket)
         {
             StartRocket();
         }
 
-        if (Input.GetKeyUp(KeyCode.LeftShift) || fuel <= 0)
+        if (Input.GetKeyUp(KeyCode.LeftShift))
         {
             StopRocket();
+        }
+
+        if (fuel <= 0) {
+            StopRocket();
+            canUseRocket = false;
+            rocketActive = false;
+        } else {
+            canUseRocket = true;
         }
 
     }
@@ -98,7 +108,11 @@ public class PogoStickController : MonoBehaviour
             Bounce();
         }
 
-        HandleRocket();
+        if (rocketActive) {
+            HandleRocket();
+        }
+        
+        
     }
 
     private void CheckGrounded()
@@ -145,11 +159,23 @@ public class PogoStickController : MonoBehaviour
 
         if (Input.GetKey(KeyCode.A))
         {
+            if (leaningLeft == false) // If previously leaning right, stop the torque to change direction quickly
+            {
+                rb.angularVelocity = Vector3.zero; // Stop all angular velocity immediately
+            }
+
             rb.AddRelativeTorque(Vector3.forward * leanTorque * facingDirectionVariable);  // Lean back
+            leaningLeft = true;
         }
         else if (Input.GetKey(KeyCode.D))
         {
+            if (leaningLeft == true) // If previously leaning left, stop the torque to change direction quickly
+            {
+                rb.angularVelocity = Vector3.zero; // Stop all angular velocity immediately
+            }
+
             rb.AddRelativeTorque(Vector3.back * leanTorque * facingDirectionVariable);  // Lean forward
+            leaningLeft = false;
         }
     }
 
@@ -197,15 +223,18 @@ public class PogoStickController : MonoBehaviour
     private IEnumerator FlipCoroutine() {
         Quaternion startRotation = transform.rotation;
         Quaternion endRotation;
+        ParticleSystem fire = rocket.transform.Find("Fire").GetComponent<ParticleSystem>();
+        var main = fire.main;
 
         if (facingLeft) {
             endRotation = Quaternion.Euler(0, 0, 0);
-            rocket.transform.Rotate(0, 0, 0);
+            main.startRotation = Mathf.Deg2Rad * -90;
             facingLeft = false;
         } else {
             endRotation = Quaternion.Euler(0, 180, 0);
-            rocket.transform.Rotate(0, 180, 0);
+            main.startRotation = Mathf.Deg2Rad * 100;
             facingLeft = true;
+            
         }
 
         float timeElapsed = 0;
@@ -262,7 +291,6 @@ public class PogoStickController : MonoBehaviour
     }
 
     private void StopRocket() {
-        if(rocketActive) {
             am.Stop("Rocket");
             foreach (Transform child in rocket.transform)
             {
@@ -270,7 +298,9 @@ public class PogoStickController : MonoBehaviour
             }
             rocketLight.enabled = false;
             rocketActive = false;
-        }
+
     }
+
+    
 
 }
